@@ -1,4 +1,4 @@
-﻿# AUTOSAR ARXML Layered Architecture Viewer
+﻿# AUTOSAR Structure Analyzer
 
 브라우저에서 `index.html`을 열면 동작하는 정적 웹앱입니다. AUTOSAR `ARXML` 파일을 업로드하면 아래 흐름으로 분석합니다.
 
