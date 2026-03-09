@@ -1,0 +1,455 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AUTOSAR ARXML Layered Architecture Viewer</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">AUTOSAR ARXML Analyzer</p>
+          <h1>ARXML 파일을 AUTOSAR Layered Architecture 보드로 변환</h1>
+          <p class="hero-text">
+            여러 개의 `.arxml` 파일을 업로드하면 SWC, 인터페이스, ECUC/BSW
+            모듈을 분석해서 AUTOSAR 계층 구조에 맞춰 시각화합니다.
+          </p>
+        </div>
+        <div class="hero-panel">
+          <div class="upload-card" id="dropZone">
+            <p class="upload-title">파일 업로드</p>
+            <p class="upload-text">
+              드래그 앤 드롭 또는 버튼 클릭으로 ARXML 파일을 선택하세요.
+            </p>
+            <input
+              id="fileInput"
+              type="file"
+              accept=".arxml,.xml"
+              multiple
+              hidden
+            />
+            <div class="upload-actions">
+              <button id="selectButton" class="primary-button" type="button">
+                ARXML 선택
+              </button>
+              <button id="demoButton" class="ghost-button" type="button">
+                데모 로드
+              </button>
+            </div>
+            <p class="upload-hint">
+              지원: AUTOSAR 4.x 계열 ARXML, ECUC 모듈 설정, SWC 정의, 인터페이스
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <main class="content-grid">
+        <section class="panel summary-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Analysis Summary</p>
+              <h2>파싱 결과</h2>
+            </div>
+            <p id="statusBadge" class="status-badge idle">대기 중</p>
+          </div>
+          <div id="statsGrid" class="stats-grid">
+            <article class="stat-card">
+              <span class="stat-label">업로드 파일</span>
+              <strong id="fileCount">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">AR-PACKAGE</span>
+              <strong id="packageCount">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">SWC / Composition</span>
+              <strong id="swcCount">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">BSW Modules</span>
+              <strong id="bswCount">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Interfaces</span>
+              <strong id="interfaceCount">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Parsing Errors</span>
+              <strong id="errorCount">0</strong>
+            </article>
+          </div>
+          <div class="insights-grid">
+            <article class="insight-card">
+              <p class="insight-title">핵심 인사이트</p>
+              <p id="headlineInsight" class="insight-body">
+                아직 분석된 ARXML이 없습니다.
+              </p>
+            </article>
+            <article class="insight-card">
+              <p class="insight-title">RTE 추정</p>
+              <p id="rteInsight" class="insight-body">
+                SWC, 포트, 인터페이스가 감지되면 RTE 구성을 유추합니다.
+              </p>
+            </article>
+          </div>
+        </section>
+
+                <section class="panel views-panel">
+          <div class="view-tabs" role="tablist" aria-label="Visualization tabs">
+            <button
+              id="architectureTab"
+              class="view-tab is-active"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="architecturePanel"
+              data-tab-target="architecture"
+            >
+              Layered Architecture
+            </button>
+            <button
+              id="interactionTab"
+              class="view-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="interactionPanel"
+              data-tab-target="interaction"
+            >
+              Interaction View
+            </button>
+          </div>
+          <p class="view-tab-copy">
+            레이어 보드와 SWC 연결 구조를 탭으로 전환해서 확인합니다.
+          </p>
+        </section>
+
+        <section id="architecturePanel" class="panel architecture-panel" data-tab-panel="architecture">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Layered Architecture</p>
+              <h2>계층 보드</h2>
+            </div>
+            <p class="panel-note">AUTOSAR classic layered architecture 기반</p>
+          </div>
+
+          <div class="architecture-board reference-architecture">
+            <section class="reference-band reference-application">
+              <div class="layer-header">
+                <h3>Application Layer</h3>
+                <span id="applicationCount" class="layer-count">0</span>
+              </div>
+              <div id="applicationLayer" class="chip-grid reference-chip-grid empty-state">
+                분석 결과가 여기에 표시됩니다.
+              </div>
+            </section>
+
+            <section class="reference-band reference-rte-band">
+              <div class="layer-header">
+                <h3>Runtime Environment</h3>
+                <span id="rteCount" class="layer-count">0</span>
+              </div>
+              <div id="rteLayer" class="chip-grid reference-chip-grid empty-state">
+                포트, 인터페이스, 러너블 정보를 기반으로 추정합니다.
+              </div>
+            </section>
+
+            <section class="reference-bsw-panel">
+              <div class="layer-header">
+                <h3>Basic Software</h3>
+                <span id="bswLayerCount" class="layer-count">0</span>
+              </div>
+              <div class="reference-bsw-scroll">
+                <div class="reference-bsw-grid">
+                  <article class="reference-cell service-cell area-system-services">
+                    <div class="reference-cell-header">
+                      <h4>System Services</h4>
+                    </div>
+                    <div id="referenceSystemServices" class="chip-grid reference-chip-grid empty-state">
+                      System Services 모듈
+                    </div>
+                  </article>
+                  <article class="reference-cell service-cell area-memory-services">
+                    <div class="reference-cell-header">
+                      <h4>Memory Services</h4>
+                    </div>
+                    <div id="referenceMemoryServices" class="chip-grid reference-chip-grid empty-state">
+                      Memory Services 모듈
+                    </div>
+                  </article>
+                  <article class="reference-cell service-cell area-crypto-services">
+                    <div class="reference-cell-header">
+                      <h4>Crypto Services</h4>
+                    </div>
+                    <div id="referenceCryptoServices" class="chip-grid reference-chip-grid empty-state">
+                      Crypto Services 모듈
+                    </div>
+                  </article>
+                  <article class="reference-cell service-cell area-offboard-services">
+                    <div class="reference-cell-header">
+                      <h4>Off-board Communication Services</h4>
+                    </div>
+                    <div id="referenceOffboardServices" class="chip-grid reference-chip-grid empty-state">
+                      Off-board Communication Services 모듈
+                    </div>
+                  </article>
+                  <article class="reference-cell service-cell area-communication-services">
+                    <div class="reference-cell-header">
+                      <h4>Communication Services</h4>
+                    </div>
+                    <div id="referenceCommunicationServices" class="chip-grid reference-chip-grid empty-state">
+                      Communication Services 모듈
+                    </div>
+                  </article>
+                  <article class="reference-cell abstraction-cell area-io-hardware">
+                    <div class="reference-cell-header">
+                      <h4>I/O Hardware Abstraction</h4>
+                    </div>
+                    <div id="referenceIoHardwareAbstraction" class="chip-grid reference-chip-grid empty-state">
+                      I/O Hardware Abstraction 모듈
+                    </div>
+                  </article>
+                  <article class="reference-cell complex-cell area-complex-drivers">
+                    <div class="reference-cell-header">
+                      <h4>Complex Drivers</h4>
+                      <span id="complexCount" class="reference-cell-count">0</span>
+                    </div>
+                    <div id="complexLayer" class="chip-grid reference-chip-grid empty-state">
+                      CDD 또는 Complex Driver 관련 항목
+                    </div>
+                  </article>
+
+                  <article class="reference-cell abstraction-cell area-onboard-device">
+                    <div class="reference-cell-header">
+                      <h4>Onboard Device Abstraction</h4>
+                    </div>
+                    <div id="referenceOnboardDeviceAbstraction" class="chip-grid reference-chip-grid empty-state">
+                      Onboard Device Abstraction 모듈
+                    </div>
+                  </article>
+                  <article class="reference-cell abstraction-cell area-memory-hardware">
+                    <div class="reference-cell-header">
+                      <h4>Memory Hardware Abstraction</h4>
+                    </div>
+                    <div id="referenceMemoryHardwareAbstraction" class="chip-grid reference-chip-grid empty-state">
+                      Memory Hardware Abstraction 모듈
+                    </div>
+                  </article>
+                  <article class="reference-cell abstraction-cell area-crypto-hardware">
+                    <div class="reference-cell-header">
+                      <h4>Crypto Hardware Abstraction</h4>
+                    </div>
+                    <div id="referenceCryptoHardwareAbstraction" class="chip-grid reference-chip-grid empty-state">
+                      Crypto Hardware Abstraction 모듈
+                    </div>
+                  </article>
+                  <article class="reference-cell abstraction-cell area-wireless-hardware">
+                    <div class="reference-cell-header">
+                      <h4>Wireless Communication HW Abstraction</h4>
+                    </div>
+                    <div id="referenceWirelessHardwareAbstraction" class="chip-grid reference-chip-grid empty-state">
+                      Wireless Communication HW Abstraction 모듈
+                    </div>
+                  </article>
+                  <article class="reference-cell abstraction-cell area-communication-hardware">
+                    <div class="reference-cell-header">
+                      <h4>Communication Hardware Abstraction</h4>
+                    </div>
+                    <div id="referenceCommunicationHardwareAbstraction" class="chip-grid reference-chip-grid empty-state">
+                      Communication Hardware Abstraction 모듈
+                    </div>
+                  </article>
+
+                  <article class="reference-cell driver-cell area-microcontroller-drivers">
+                    <div class="reference-cell-header">
+                      <h4>Microcontroller Drivers</h4>
+                    </div>
+                    <div id="referenceMicrocontrollerDrivers" class="chip-grid reference-chip-grid empty-state">
+                      Microcontroller Drivers 모듈
+                    </div>
+                  </article>
+                  <article class="reference-cell driver-cell area-memory-drivers">
+                    <div class="reference-cell-header">
+                      <h4>Memory Drivers</h4>
+                    </div>
+                    <div id="referenceMemoryDrivers" class="chip-grid reference-chip-grid empty-state">
+                      Memory Drivers 모듈
+                    </div>
+                  </article>
+                  <article class="reference-cell driver-cell area-crypto-drivers">
+                    <div class="reference-cell-header">
+                      <h4>Crypto Drivers</h4>
+                    </div>
+                    <div id="referenceCryptoDrivers" class="chip-grid reference-chip-grid empty-state">
+                      Crypto Drivers 모듈
+                    </div>
+                  </article>
+                  <article class="reference-cell driver-cell area-wireless-drivers">
+                    <div class="reference-cell-header">
+                      <h4>Wireless Communication Drivers</h4>
+                    </div>
+                    <div id="referenceWirelessDrivers" class="chip-grid reference-chip-grid empty-state">
+                      Wireless Communication Drivers 모듈
+                    </div>
+                  </article>
+                  <article class="reference-cell driver-cell area-communication-drivers">
+                    <div class="reference-cell-header">
+                      <h4>Communication Drivers</h4>
+                    </div>
+                    <div id="referenceCommunicationDrivers" class="chip-grid reference-chip-grid empty-state">
+                      Communication Drivers 모듈
+                    </div>
+                  </article>
+                  <article class="reference-cell driver-cell area-io-drivers">
+                    <div class="reference-cell-header">
+                      <h4>I/O Drivers</h4>
+                    </div>
+                    <div id="referenceIoDrivers" class="chip-grid reference-chip-grid empty-state">
+                      I/O Drivers 모듈
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </section>
+
+            <section class="reference-band reference-microcontroller">
+              <div class="reference-static-copy">
+                <h3>Microcontroller</h3>
+                <p>MCU core, peripheral, memory hardware boundary</p>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="interactionPanel" class="panel interaction-panel" data-tab-panel="interaction" hidden>
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Interaction View</p>
+              <h2>SWC 연결 구조</h2>
+            </div>
+            <p id="connectionSummary" class="panel-note">
+              Composition connector가 감지되면 노드 그래프로 표시됩니다.
+            </p>
+          </div>
+
+          <div class="interaction-layout">
+            <div class="interaction-visual">
+              <div id="interactionControls" class="interaction-controls">
+                <div class="interaction-mode-tabs" role="tablist" aria-label="Interaction layout mode">
+                  <button
+                    id="interactionGraphMode"
+                    class="interaction-mode-tab is-active"
+                    type="button"
+                    data-interaction-mode="graph"
+                    aria-pressed="true"
+                  >
+                    Graph
+                  </button>
+                  <button
+                    id="interactionReferenceMode"
+                    class="interaction-mode-tab"
+                    type="button"
+                    data-interaction-mode="reference"
+                    aria-pressed="false"
+                  >
+                    Reference Layout
+                  </button>
+                </div>
+                <div id="interactionGraphControls" class="interaction-graph-controls">
+                  <label class="layout-control">
+                    <span>노드 간격</span>
+                    <input id="interactionGapControl" type="range" min="24" max="220" step="12" value="72" />
+                    <strong id="interactionGapValue">72px</strong>
+                  </label>
+                  <label class="layout-control">
+                    <span>Lane 높이</span>
+                    <input id="interactionLaneHeightControl" type="range" min="162" max="280" step="10" value="188" />
+                    <strong id="interactionLaneHeightValue">188px</strong>
+                  </label>
+                  <button id="resetInteractionLayoutButton" class="ghost-button interaction-control-button" type="button">
+                    자동 정렬
+                  </button>
+                </div>
+                <p id="interactionHintInline" class="interaction-hint-inline">노드는 lane 안에서 드래그해 위치를 조정할 수 있습니다.</p>
+              </div>
+              <div id="interactionCanvas" class="interaction-canvas empty-state">
+                Composition connector가 감지되면 SWC/CDD 간 연결 구조를 여기에 표시합니다.
+              </div>
+            </div>
+            <aside class="interaction-sidebar">
+              <article class="selection-card">
+                <p class="selection-title">선택 상세</p>
+                <div id="interactionDetails" class="selection-body empty-state">
+                  노드 또는 연결을 선택하면 In/Out 관계와 포트 매핑을 보여줍니다.
+                </div>
+              </article>
+              <article class="selection-card">
+                <p class="selection-title">연결 목록</p>
+                <div id="connectionList" class="connection-list empty-state">
+                  분석된 연결 구조가 아직 없습니다.
+                </div>
+              </article>
+            </aside>
+          </div>
+        </section>
+
+        <section class="panel evidence-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Traceability</p>
+              <h2>분석 근거</h2>
+            </div>
+            <p class="panel-note">레이어 분류의 원본 태그와 파일 위치</p>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>분류</th>
+                  <th>항목</th>
+                  <th>태그/모듈</th>
+                  <th>패키지 경로</th>
+                  <th>파일</th>
+                </tr>
+              </thead>
+              <tbody id="evidenceBody">
+                <tr>
+                  <td colspan="5" class="empty-row">
+                    업로드 후 분석 근거가 표시됩니다.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel file-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">Uploaded Files</p>
+              <h2>파일 목록</h2>
+            </div>
+            <p class="panel-note">파싱 성공/실패 상태 포함</p>
+          </div>
+          <div id="fileList" class="file-list empty-state">
+            업로드된 파일이 없습니다.
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <template id="chipTemplate">
+      <div class="layer-chip">
+        <div class="chip-title"></div>
+        <div class="chip-meta"></div>
+      </div>
+    </template>
+
+    <script src="./app.js" charset="utf-8"></script>
+  </body>
+</html>
+
